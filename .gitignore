@@ -1,0 +1,19 @@
+# Ambiente virtual
+.venv/
+venv/
+
+
+# Arquivos do Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Logs e arquivos temporários
+*.logs
+*.backups
+*.capturas
+.pytest_cache/
+.DS_Store
+.vscode/
+.idea/

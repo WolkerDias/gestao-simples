@@ -1,0 +1,10 @@
+{
+    "schedule_type": "daily",
+    "time": "09:00",
+    "day": "1",
+    "enabled": true,
+    "retention_method": "Quantidade de Backups",
+    "retain_days": 30,
+    "retain_count": 5,
+    "retention_enabled": false
+}
