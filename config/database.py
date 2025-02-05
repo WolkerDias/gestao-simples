@@ -11,11 +11,11 @@ import subprocess
 import platform
 import winreg
 from pathlib import Path
-from config.settings import USER, PASSWORD, HOST, DATABASE, BACKUP_DIR
+from config.settings import DB_CONFIG, BACKUP_DIR
 
 
 # Monta a URL de conexão
-DATABASE_URL = f"mysql+pymysql://{USER}:{PASSWORD}@{HOST}/{DATABASE}"
+DATABASE_URL = f"mysql+pymysql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}/{DB_CONFIG['database']}"
 #DATABASE_URL = "mysql+pymysql://root:@localhost:3306/db"
 
 # Create engine with logging
@@ -74,7 +74,7 @@ def backup_database():
 
         # Generate backup filename with timestamp
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        backup_file = os.path.join(BACKUP_DIR, f'{DATABASE}_backup_{timestamp}.sql')
+        backup_file = os.path.join(BACKUP_DIR, f"{DB_CONFIG['database']}_backup_{timestamp}.sql")
         
         # Get mysqldump path
         mysqldump_path = get_mysql_path()
@@ -83,8 +83,8 @@ def backup_database():
         # Preparar comando
         command = [
             mysqldump_path,
-            '-u', USER,  # usuário
-            '--databases', DATABASE,
+            '-u', DB_CONFIG['user'],  # usuário
+            '--databases', DB_CONFIG['database'],
             '--result-file', backup_file,
             '--skip-comments',
             '--skip-extended-insert'
@@ -162,8 +162,8 @@ def restore_database(backup_file):
         # Preparar comando
         command = [
             mysql_path,
-            '-u', USER,  # usuário
-            DATABASE     # nome do banco
+            '-u', DB_CONFIG['user'],  # usuário
+            DB_CONFIG['database']     # nome do banco
         ]
         
         # Se tiver senha, adicione aqui

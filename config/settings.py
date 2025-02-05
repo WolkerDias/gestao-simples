@@ -2,10 +2,12 @@
 import os
 
 # conexão com o banco de dados
-USER = 'root'
-PASSWORD = ''
-HOST = 'localhost'
-DATABASE = 'db_teste'
+DB_CONFIG = {
+    'user': 'root',
+    'password': '',
+    'host': 'localhost',
+    'database': 'db_gestao'
+}
 
 # Criar diretório de logs se não existir
 LOG_DIR = ".logs"
