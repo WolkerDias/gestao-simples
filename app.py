@@ -8,6 +8,8 @@ from config.database import engine
 from models.base import Base
 from utils.logger import logger
 from utils.backup_scheduler import BackupScheduler
+from dotenv import load_dotenv
+load_dotenv()
 
 # Configurar página
 st.set_page_config(

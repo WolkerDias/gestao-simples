@@ -8,8 +8,6 @@ from services.nfce_service import NFCeService
 from services.item_nfce_service import ItemNFCeService
 from utils.message_handler import message_handler, MessageType
 
-
-
 class QRCodeView:
     def __init__(self):
         self.qrcode_service = QRCodeService()
@@ -27,6 +25,7 @@ class QRCodeView:
         option_map = {
             0: ":material/upload: Upload de Imagem",
             1: ":material/camera: Câmera ao Vivo",
+            2: ":material/link: Chave de Acesso ou URL"
         }
 
         # Seleção do método de entrada de QR Code com valor inicial 0
@@ -41,8 +40,10 @@ class QRCodeView:
 
         if selection == 0:
             self._handle_upload_mode()
-        else:
+        elif selection == 1:
             self._handle_camera_mode()
+        else:
+            self._handle_url_mode()
 
     def _handle_upload_mode(self):
         key = st.session_state.get("file_uploader_key", 0)
@@ -66,12 +67,41 @@ class QRCodeView:
         if camera_input is not None:
             self._process_image(Image.open(camera_input), "captured")
 
+    def _handle_url_mode(self):
+        """Manipula a entrada de URL para processamento direto do QR Code"""
+        key = st.session_state.get("url_input_key", 0)
+        url = st.text_input(
+            "Digite a chave de acesso ou a URL do QR Code da NFCe:",
+            placeholder="Chave de Acesso ou URL do QR Code",
+            key=f"url_input_{key}"
+        )
+        
+        if url:
+            self._process_url(url)
+
+    def _process_url(self, url):
+        """Processa uma URL diretamente sem necessidade de imagem"""
+        try:
+            # Processa a URL como se fosse um QR Code decodificado
+            nfce_data, qrcode_url = self.qrcode_service.process_qr_code_url(url)
+            
+            if nfce_data:
+                self._display_nfce_data(nfce_data, qrcode_url)
+            else:
+                st.error("Não foi possível extrair dados da NFCe desta URL.")
+
+        except Exception as e:
+            st.error(f"Falha ao processar URL: {str(e)}")
+            st.exception(e)
+
     def _process_image(self, image, source_type):
         try:
             # Corrige orientação e salva
             image = self.qrcode_service.correct_image_orientation(image)
             save_path = self.qrcode_service.save_image(image, source_type)
-            st.success(f"Imagem salva em {save_path}")
+            expander = st.expander("Ver imagem")
+            expander.image(image, caption="Imagem QR Code", use_container_width=True)
+            expander.success(f"Imagem salva em {save_path}")
 
             # Processa imagem baseado na fonte
             if source_type == "uploaded":
@@ -80,7 +110,6 @@ class QRCodeView:
                 image_cv, image_processed = self.qrcode_service.process_camera_image(image)
 
             if image_cv is not None:
-                st.image(image_processed, caption="Imagem Processada", use_container_width=True)
                 self._process_qr_code(image_cv)
 
         except Exception as e:
@@ -159,9 +188,12 @@ class QRCodeView:
                 st.session_state["file_uploader_key"] = 0
             if "camera_input_key" not in st.session_state:
                 st.session_state["camera_input_key"] = 0
+            if "url_input_key" not in st.session_state:
+                st.session_state["url_input_key"] = 0
             
             st.session_state["file_uploader_key"] += 1
             st.session_state["camera_input_key"] += 1
+            st.session_state["url_input_key"] += 1
             
             st.rerun()
             

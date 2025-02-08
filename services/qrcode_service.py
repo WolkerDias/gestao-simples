@@ -13,8 +13,12 @@ from models.nfce import NFCe
 from models.fornecedor import Fornecedor
 from utils.logger import logger
 from config.settings import CAPTURE_DIR
-
+from services.browser_service import BrowserService
+import streamlit as st
+import re
 class QRCodeService:
+    def __init__(self):
+        self.browser_service = BrowserService()
 
     def preprocess_image(self, image):
         """Pré-processa a imagem para melhor detecção de QR Code."""
@@ -46,25 +50,40 @@ class QRCodeService:
             raise
 
     def process_qr_code_url(self, url):
-        """Processa o URL do QR Code para extrair os dados."""
+        """Processa URLs ou chaves de acesso NFC-e para extrair dados"""
         try:
-            parsed_url = urlparse(url)
-            query_params = parse_qs(parsed_url.query)
-            param = query_params.get('p', [None])[0]
-
-            if param:
+            st.toast("Iniciando processamento da entrada...")
+            
+            # Verifica se a entrada é uma chave de acesso (44 dígitos)
+            cleaned_input = re.sub(r'\D', '', url)  # Remove não dígitos
+            if len(cleaned_input) == 44:
+                st.toast("Detectada chave de acesso NFC-e. Construindo URL...")
+                encoded_url = f"https://www.dfe.ms.gov.br/nfce/consulta/?tpAmb=0&chNFe={cleaned_input}&redirect=true"
+                param = cleaned_input  # Usa a chave diretamente como parâmetro
+            else:
+                # Processamento padrão para URLs com parâmetro 'p'
+                parsed_url = urlparse(url)
+                query_params = parse_qs(parsed_url.query)
+                param = query_params.get('p', [None])[0]
+                
+                if not param:
+                    raise Exception("Nenhum parâmetro 'p' encontrado ou chave inválida")
+                
                 encoded_param = quote(param, encoding='utf-8')
                 encoded_url = f"https://www.dfe.ms.gov.br/nfce/qrcode/?p={encoded_param}"
 
-                response = requests.get(encoded_url)
-                if response.status_code == 200:
-                    return self.extract_nfce_data(response.text), encoded_url
-                else:
-                    logger.error(f"Erro ao acessar a página. Status Code: {response.status_code}")
-                    raise Exception(f"Erro ao acessar a página. Status Code: {response.status_code}")
+            st.toast("Obtendo dados da NFCe...")
+            html_content = self.browser_service.get_page_with_captcha_handling(encoded_url)
+            
+            if html_content:
+                st.toast("Extraindo dados do HTML...")
+                return self.extract_nfce_data(html_content), encoded_url
+            else:
+                raise Exception("Falha ao obter conteúdo da página")
 
         except Exception as e:
-            logger.error(f"Erro ao processar URL do QR Code: {str(e)}")
+            st.error(f"Erro ao processar entrada: {str(e)}")
+            logger.error(f"Erro no processamento: {str(e)}")
             raise
 
     def extract_nfce_data(self, html):
