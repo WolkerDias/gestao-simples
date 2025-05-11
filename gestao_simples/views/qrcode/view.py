@@ -117,10 +117,8 @@ class QRCodeView:
         try:
             # Corrige orientação e salva
             image = self.qrcode_service.correct_image_orientation(image)
-            save_path = self.qrcode_service.save_image(image, source_type)
             expander = st.expander("Ver imagem")
             expander.image(image, caption="Imagem QR Code", use_container_width=True)
-            expander.success(f"Imagem salva em {save_path}")
 
             # Processa imagem baseado na fonte
             if source_type == "uploaded":
