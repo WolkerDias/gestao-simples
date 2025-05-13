@@ -283,6 +283,23 @@ poetry run streamlit run app.py
 
 Acesse no navegador: 🌐 <http://localhost:8501>
 
+## 📦 Empacotamento e Distribuição
+
+### Gerar executável com cx_Freeze
+
+```bash
+poetry run python setup.py build 
+```
+
+### 📦 Gerar instalador com Inno Setup
+
+1. Baixe e instale o Inno Setup Compiler:
+   👉 [Download Inno Setup (JRSoftware)](https://jrsoftware.org/isdl.php)
+
+2. Abra o arquivo `inno/setup_gestao_simples.iss` com o Inno Setup
+
+3. Pressione `Ctrl + F9` ou clique em **Compile** para gerar o instalador `.exe` no diretório `\dist\X.X.X`.
+
 ## 🗂️ Estrutura do Projeto
 
 ```bash
@@ -297,10 +314,21 @@ gestao-simples/
 │  ├──📂 utils/           # Funções utilitárias
 │  ├──📂 views/           # Interfaces
 │  ├──📜 __init__.py      # Inicializador do pacote
+│  ├──📜 .env             # Variáveis de ambiente (cópia de .env.example)
 │  └──📜 app.py           # Aplicação principal
+│
+├──📂 inno/               # Scripts para gerar instalador com Inno Setup
+│  ├──📜 setup_gestao_simples.iss # Script de instalação
+│  └──📜 BrazilianPortuguese.isl  # Tradução do instalador
+│
+├──📂 build/              # (Ignorado no Git) Saída do cx_Freeze
+├──📂 dist/               # (Ignorado no Git) Executável gerado
+│
+├──📜 app_launcher.py     # Arquivo para inicialização (launcher)
+├──📜 setup.py            # Script cx_Freeze para empacotamento
+├──📜 .gitignore          # Arquivos ignorados pelo Git
 ├──📜 pyproject.toml      # Configuração do Poetry
 └──📜 README.md           # Este arquivo
-
 ```
 
 ### 📝 Observações Importantes
