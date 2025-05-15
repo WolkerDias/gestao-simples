@@ -15,10 +15,12 @@ DEFAULT_PASSWORD = os.getenv("DEFAULT_PASSWORD")
 
 # conexão com o banco de dados
 DB_CONFIG = {
+    'type': os.getenv('DB_TYPE', 'mysql'),  # 'mysql' ou 'postgres'
     'user': os.getenv('DB_USER'),
     'password': os.getenv('DB_PASSWORD'),
     'host': os.getenv('DB_HOST'),
     'database': os.getenv('DB_NAME'),
+    'port': os.getenv('DB_PORT'),  # Porta opcional, útil para PostgreSQL
 }
 
 # Criar diretório de logs se não existir

@@ -298,7 +298,7 @@ poetry run python setup.py build
 
 2. Abra o arquivo `inno/setup_gestao_simples.iss` com o Inno Setup
 
-3. Pressione `Ctrl + F9` ou clique em **Compile** para gerar o instalador `.exe` no diretório `\dist\X.X.X`.
+3. Pressione `Ctrl + F9` ou clique em **Compile** para gerar o instalador `.exe` no diretório `\dist\vX.X.X`.
 
 ## 🗂️ Estrutura do Projeto
 
