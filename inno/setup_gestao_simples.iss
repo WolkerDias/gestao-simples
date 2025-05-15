@@ -1,7 +1,7 @@
 ; Script para Inno Setup - Gestão Simples
 [Setup]
 AppName=Gestão Simples
-AppVersion=0.1.1
+AppVersion=0.1.2
 AppPublisher=WolkerDias
 AppPublisherURL=https://github.com/WolkerDias/gestao-simples
 AppSupportURL=https://github.com/WolkerDias/gestao-simples/blob/main/README.md
@@ -36,7 +36,7 @@ Name: "{app}\gestao_simples\tmp"; Permissions: users-modify
 [Files]
 Source: "..\build\exe.win-amd64-3.11\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Inclui todos os arquivos necessários
-Source: "..\gestao_simples\.env"; DestDir: "{app}\gestao_simples"; Flags: ignoreversion
+Source: "..\gestao_simples\.env"; DestDir: "{app}\gestao_simples"; Flags: ignoreversion; 
 
 ; Adicione esta linha para incluir o ícone no pacote de instalação
 Source: "..\icon.ico"; DestDir: "{app}"; Flags: ignoreversion
@@ -48,6 +48,8 @@ Name: "{autodesktop}\Gestão Simples"; Filename: "{app}\gestao-simples.exe"; Ico
 
 [Run]
 Filename: "{app}\gestao-simples.exe"; Description: "{cm:LaunchProgram,Gestão Simples}"; Flags: nowait postinstall skipifsilent
+; Oculta o arquivo .env após a instalação
+Filename: "attrib.exe"; Parameters: "+H ""{app}\gestao_simples\.env"""; Flags: runhidden
 
 [UninstallRun]
 Filename: "{app}\stop_server.bat"; Flags: runhidden; RunOnceId: "StopServer"

@@ -19,6 +19,7 @@ options = {
             'pyzbar',
             'pyarrow',
             'pymysql',
+            'psycopg2',
             'selenium',
             'webdriver_manager',
             'dotenv',
@@ -31,6 +32,7 @@ options = {
             ('gestao_simples/.env', 'gestao_simples/.env'),
             ('gestao_simples/', 'gestao_simples/'),
             ('stop_server.bat', 'stop_server.bat'),
+            ('dump', 'dump'),
             ('icon.ico', 'icon.ico'),
             # outras pastas adicionais se necessário
         ],
@@ -41,7 +43,7 @@ options = {
 
 setup(
     name='gestao-simples',
-    version='0.1.1',
+    version='0.1.2',
     description='Sistema de gestão simplificado',
     executables=executables,
     options=options,
