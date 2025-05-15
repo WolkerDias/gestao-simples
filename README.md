@@ -4,7 +4,7 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![Framework Streamlit](https://img.shields.io/badge/Streamlit-1.41.1-FF4B4B)](https://streamlit.io/)
 
-  > Sistema de gestão simplificado para pequenas empresas que automatiza a leitura de cupons via QR Code, coleta dados da SEFAZ-MS e armazena informações de forma segura em banco de dados MySQL.
+  > Sistema de gestão simplificado para pequenas empresas que automatiza a leitura de cupons via QR Code, coleta dados da SEFAZ-MS e armazena informações de forma segura em banco de dados MySQL ou PostgreSQL.
 
 ## 🎯 O Problema
 
@@ -205,7 +205,7 @@ Antes de começar, verifique se você possui
 
 - ✅ Python 3.11 ou superior instalado
 - ✅ Git instalado na sua máquina
-- ✅ Servidor MySQL em execução
+- ✅ Servidor MySQL ou PostgreSQL em execução
 - ✅ Poetry instalado (gerenciador de dependências)
 
 **Siga estes passos para configurar o projeto:**
@@ -233,7 +233,7 @@ Recomendamos o uso do Poetry para gerenciamento de dependências:
 
 Antes de iniciar o projeto, configure suas credenciais de banco de dados:
 
-- Crie o banco de dados MySQL correspondente:
+- Crie o banco de dados MySQL ou PostgreSQL:
 
   ```sql
   CREATE DATABASE db_gestao;
@@ -245,21 +245,34 @@ Antes de iniciar o projeto, configure suas credenciais de banco de dados:
     cp .env.example .env
   ```
 
-- Preencha com suas credenciais MySQL:
-
-  ```.env
-  DB_USER=root            # 👤 Seu usuário
-  DB_PASSWORD=sua_senha   # 🔑 Sua senha
-  DB_HOST=localhost       # 🌐 Servidor MySQL
-  DB_NAME=db_gestao       # 🗃️ Nome do banco
-  ```
-
 - Adicione ao `.gitignore` (caso ainda não tenha feito):
 
   ```.gitignore
     # Arquivo de variáveis de ambiente (não versionar)
     .env
   ```
+
+- Preencha com suas credenciais do banco de dados:
+  - Opção 1:
+
+    - Ir para a seção [🚦 Iniciando o Sistema](#-iniciando-o-sistema)
+    - Configurar na tela de configuração de banco de dados
+    - Reiniciar o servidor após salvar as configurações
+
+  - Opção 2:
+    - Editar o arquivo `.env` manualmente
+
+      ```.env
+      # Configuração do tipo de banco de dados (mysql ou postgres)
+      DB_TYPE='mysql'
+
+      # 🛢️ Configurações de acesso ao banco de dados
+      DB_USER=root            # 👤 Seu usuário
+      DB_PASSWORD=sua_senha   # 🔑 Sua senha
+      DB_HOST=localhost       # 🌐 Servidor MySQL ou PostgreSQL
+      DB_NAME=db_gestao       # 🗃️ Nome do banco
+      DB_PORT='3602'
+      ```
 
 ## 🚦 Iniciando o Sistema
 
@@ -306,7 +319,7 @@ poetry run python setup.py build
 gestao-simples/
 ├──📂 gestao_simples/     # Pacote principal (diretório com códigos Python)
 │  ├──📂 config/          # Configurações do sistema
-│  │  ├──📜 database.py   # Conexão com MySQL
+│  │  ├──📜 database.py   # Conexão com MySQL ou PostgreSQL
 │  │  └──📜 settings.py   # Configurações gerais do sistema
 │  ├──📂 models/          # Modelos de dados
 │  ├──📂 repositories/    # Camada de repositórios
@@ -338,7 +351,7 @@ gestao-simples/
 
 ## 🆘 Problemas comuns
 
-### Erro de conexão com MySQL
+### Erro de conexão com baco de dados
 
 - Verifique se o servidor está online
 - Confira usuário/senha no `.env`
