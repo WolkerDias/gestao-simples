@@ -4,6 +4,7 @@ from models.produto_fornecedor_associacao import ProdutoFornecedorAssociacao
 from services.nota_entrada_service import NotaEntradaService
 from services.fornecedor_service import FornecedorService
 from utils.logger import logger
+import time
 
 class ProdutoFornecedorAssociacaoService:
     def __init__(self):
@@ -45,20 +46,25 @@ class ProdutoFornecedorAssociacaoService:
         self.repository.deletar(associacao_id)        
 
     def listar_todos_itens_nao_associados(self):
+        inicio = time.time()
         todos_fornecedores = self._get_fornecedores_com_itens()
+
+        # Carrega todas as associações existentes de uma vez
+        todas_associacoes = self.repository.listar()
+
+        associacoes_index = {
+            (a.fornecedor_id, a.codigo_produto_fornecedor, a.descricao_produto_fornecedor): True
+            for a in todas_associacoes
+        }
+                
         itens_nao_associados = []
         
         for fornecedor in todos_fornecedores:
             itens_fornecedor = self.nota_entrada_service.listar_itens_unicos_por_fornecedor(fornecedor.id)
-            
+
             for item in itens_fornecedor:
-                associacao_existente = self.repository.buscar_por_criterios(
-                    fornecedor_id=fornecedor.id,
-                    codigo=item['codigo'], 
-                    descricao=item['descricao']
-                )
-                
-                if not associacao_existente:
+                chave = (fornecedor.id, item['codigo'], item['descricao'])
+                if chave not in associacoes_index:
                     itens_nao_associados.append({
                         "fornecedor_id": fornecedor.id,
                         "fornecedor_nome": fornecedor.nome,
@@ -66,7 +72,8 @@ class ProdutoFornecedorAssociacaoService:
                         "descricao": item['descricao'],
                         "unidade": item['unidade']
                     })
-        logger.info(f"Itens não associados encontrados: {len(itens_nao_associados)}")        
+                
+        logger.info(f"Itens não associados encontrados: {len(itens_nao_associados)} - Duração da busca: {time.time() - inicio:.2f}s")
         return itens_nao_associados
 
     def _get_fornecedores_com_itens(self):

@@ -31,13 +31,3 @@ class NotaEntradaRepository(BaseRepository):
             session = SessionLocal()        
         with session:        
             return session.query(NotaEntrada).filter(NotaEntrada.chave_acesso == chave_acesso).first()
-        
-    def listar_por_fornecedor_ordenado(self, fornecedor_id: int, session=None):
-        if session is None:
-            session = SessionLocal()
-        return (
-            session.query(NotaEntrada)
-            .filter(NotaEntrada.fornecedor_id == fornecedor_id)
-            .order_by(NotaEntrada.data_emissao.desc())
-            .all()
-        )

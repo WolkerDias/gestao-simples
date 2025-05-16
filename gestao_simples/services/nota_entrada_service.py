@@ -6,9 +6,9 @@ from utils.message_handler import message_handler, MessageType
 from config.database import SessionLocal
 from services.item_nota_entrada_service import ItemNotaEntradaService
 from models.item_nota_entrada import ItemNotaEntrada
+from models.nota_entrada import NotaEntrada
 from sqlalchemy.exc import IntegrityError
-
-
+from sqlalchemy import func
 
 class NotaEntradaService:
     def __init__(self):
@@ -129,37 +129,39 @@ class NotaEntradaService:
     def deletar_nota_entrada(self, id):
         return self.repository.deletar(id)
     
-    def listar_itens_unicos_por_fornecedor(self, fornecedor_id: int)-> list:
-        session = SessionLocal()
-        try:
-            # Usa o repositório para buscar NotaEntradas ordenadas
-            notas_entrada = self.repository.listar_por_fornecedor_ordenado(fornecedor_id, session=session)
-            
-            itens_unicos = {}
-            for nota_entrada in notas_entrada:
-                for item in nota_entrada.itens:
-                    if item.codigo_produto_fornecedor:
-                        # Chave composta para garantir unicidade
-                        key = (
-                            item.codigo_produto_fornecedor,
-                            item.unidade_medida,
-                            item.descricao
-                        )
-                        if key not in itens_unicos:
-                            itens_unicos[key] = {
-                                'codigo': item.codigo_produto_fornecedor,
-                                'descricao': item.descricao,
-                                'unidade': item.unidade_medida,
-                                'valor': item.valor,
-                                'data_emissao': nota_entrada.data_emissao
-                            }
-                            
-            # Ordena os itens por descrição
-            itens_ordenados = sorted(
-                itens_unicos.values(), 
-                key=lambda x: x['descricao'].lower()  # Ordenação case-insensitive
+    def listar_itens_unicos_por_fornecedor(self, fornecedor_id: int) -> list:
+        with SessionLocal() as session:
+            resultados = (
+                session.query(
+                    ItemNotaEntrada.codigo_produto_fornecedor,
+                    ItemNotaEntrada.unidade_medida,
+                    ItemNotaEntrada.descricao,
+                    func.max(ItemNotaEntrada.valor).label("valor"),
+                    func.max(NotaEntrada.data_emissao).label("data_emissao")
+                )
+                .join(NotaEntrada, ItemNotaEntrada.nota_entrada_id == NotaEntrada.id)
+                .filter(NotaEntrada.fornecedor_id == fornecedor_id)
+                .filter(ItemNotaEntrada.codigo_produto_fornecedor.isnot(None))
+                .group_by(
+                    ItemNotaEntrada.codigo_produto_fornecedor,
+                    ItemNotaEntrada.unidade_medida,
+                    ItemNotaEntrada.descricao
+                )
+                .all()
             )
-            
+
+            # Organiza e ordena
+            itens_ordenados = sorted(
+                [
+                    {
+                        'codigo': row.codigo_produto_fornecedor,
+                        'descricao': row.descricao,
+                        'unidade': row.unidade_medida,
+                        'valor': row.valor,
+                        'data_emissao': row.data_emissao
+                    }
+                    for row in resultados
+                ],
+                key=lambda x: x['descricao'].lower()
+            )
             return itens_ordenados
-        finally:
-            session.close()
