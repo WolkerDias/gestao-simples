@@ -5,6 +5,7 @@ from services.produto_fornecedor_associacao_service import ProdutoFornecedorAsso
 from views.produto.associacao.view import show_view_associacao
 from views.produto.associacao.create import show_create_associacao
 from views.produto.associacao.delete import confirm_delete_dialog
+from utils.format import format_datetime
 from utils.message_handler import message_handler
 
 class AssociacoesListView:
@@ -14,7 +15,9 @@ class AssociacoesListView:
 
     def render(self):
         st.title("📋 Associações Cadastradas")
-        itens_nao_associados = self.service.listar_todos_itens_nao_associados()
+        with st.spinner("🔍 Buscando itens não associados..."):        
+            itens_nao_associados = self.service.listar_todos_itens_nao_associados()
+
         if itens_nao_associados:
             st.info(f"⛓️‍💥 Produtos não associados encontrados: {len(itens_nao_associados)}")
             disabled = False
@@ -36,7 +39,8 @@ class AssociacoesListView:
             if st.button("🔗 Associar Produtos", use_container_width=True, disabled=disabled):
                 show_create_associacao()        
 
-        associacoes = self.service.listar_associacoes()
+        with st.spinner("📦 Carregando associações existentes..."):
+            associacoes = self.service.listar_associacoes()
             
         if not associacoes:
             st.info("Nenhuma associação cadastrada.")
@@ -44,7 +48,7 @@ class AssociacoesListView:
 
         df = pd.DataFrame([{
             'ID': a.id,
-            'Data': a.created_at,
+            'Data': format_datetime(a.created_at),
             'Fornecedor': a.fornecedor.nome,
             'Ref. Fornecedor': a.codigo_produto_fornecedor,
             'Produto': a.produto.nome,

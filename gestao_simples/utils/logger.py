@@ -11,6 +11,7 @@ log_filename = os.path.join(LOG_DIR, f"app_{datetime.now().strftime('%Y%m')}.log
 # Configurar o logging
 logging.basicConfig(
     filename=log_filename,
+    encoding='utf-8',
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
