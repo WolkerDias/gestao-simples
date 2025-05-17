@@ -229,8 +229,12 @@ def backup_postgres(timestamp):
             '-U', DB_CONFIG['user'],
             '-d', DB_CONFIG['database'],
             '-h', DB_CONFIG['host'],
-            '--clean',  # Adiciona DROP TABLE antes de CREATE TABLE
-            '-f', backup_file
+            '--clean',              # DROP TABLE antes do CREATE TABLE
+            '--inserts',            # INSERT por linha (sem multi-row)
+            '--no-owner',           # Remove comandos OWNER TO
+            '--no-privileges',      # Remove GRANT/REVOKE
+            '--no-comments',        # Remove comentários
+            '-f', backup_file       # Arquivo de saída
         ]
         
         # Se tiver porta especificada
