@@ -31,9 +31,9 @@ def show_view_produto(produto):
         with st.popover("🗑️ Excluir Produto", use_container_width=True):
             st.warning("⚠️ Você tem certeza que deseja excluir este produto? Esta ação não pode ser desfeita.")
             if st.button("Confirmar Exclusão", type="primary", use_container_width=True):
+                
                 try:
                     produto_service.deletar_produto(produto.id)
-                    st.success(f"Produto excluído com sucesso!")
                     st.rerun()
                 except Exception as e:
                     st.error(f"Erro ao excluir Produto: {e}")
