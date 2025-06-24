@@ -15,15 +15,17 @@ class GeminiService:
     def __init__(self):
         # Configurar a API key do Gemini
         api_key = os.getenv('GEMINI_API_KEY')
+        gemini_model = os.getenv('GEMINI_MODEL')
         if not api_key:
             # Fallback para configuração via Streamlit secrets
             api_key = st.secrets.get("GEMINI_API_KEY", None)
-        
+            gemini_model = st.secrets.get("GEMINI_MODEL")
+
         if not api_key:
             raise ValueError("GEMINI_API_KEY não encontrada nas variáveis de ambiente ou secrets do Streamlit")
         
         genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-2.5-flash')
+        self.model = genai.GenerativeModel(gemini_model)
 
     def add_matching_suggestions(self, cupom_data, fornecedor_id, nota_entrada_service):
         """

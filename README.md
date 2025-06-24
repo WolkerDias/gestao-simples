@@ -157,6 +157,14 @@ O Gestão Simples é um sistema de gestão inteligente que transforma notas fisc
 
     ![Sistema de Gerenciamento de Backup de Banco de Dados](/image/backup_restauracao.gif)
 
+8. 🧾 **Extração Inteligente de Cupons Não Fiscais Usando IA**
+   - Permite capturar cupons de supermercados ou vendas com imagem da câmera ou upload
+   - Extrai automaticamente os dados com IA usando Gemini
+   - Sugere o fornecedor automaticamente com base no CNPJ ou nome aproximado
+   - Permite seleção manual do fornecedor com preenchimento automático
+   - Aplica sugestões inteligentes de matching com produtos previamente cadastrados
+   - Interface amigável para revisão e edição final dos dados extraídos antes do salvamento
+
 ---
 
 ### 🏗️ Funcionalidades em Desenvolvimento
