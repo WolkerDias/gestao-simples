@@ -1,7 +1,7 @@
 ; Script para Inno Setup - Gestão Simples
 [Setup]
 AppName=Gestão Simples
-AppVersion=0.2.2
+AppVersion=0.3.1
 AppPublisher=WolkerDias
 AppPublisherURL=https://github.com/WolkerDias/gestao-simples
 AppSupportURL=https://github.com/WolkerDias/gestao-simples/blob/main/README.md

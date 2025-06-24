@@ -137,34 +137,6 @@ class CupomView:
         except Exception as e:
             st.error(f"❌ Erro ao processar imagem do cupom: {str(e)}")
 
-    def _find_existing_fornecedor(self, fornecedor_nome, fornecedor_cnpj):
-        """
-        Função auxiliar otimizada para centralizar a lógica de busca de fornecedor
-        Usa cache local para evitar múltiplas consultas ao banco
-        
-        Args:
-            fornecedor_nome: Nome do fornecedor extraído do cupom
-            fornecedor_cnpj: CNPJ do fornecedor extraído do cupom
-            
-        Returns:
-            Fornecedor ou None se não encontrado
-        """
-        fornecedor_encontrado = None
-        
-        # Primeira tentativa: busca por CNPJ (consulta otimizada)
-        if fornecedor_cnpj:
-            fornecedor_encontrado = self.fornecedor_service.buscar_fornecedor_por_cnpj(fornecedor_cnpj)
-        
-        # Segunda tentativa: busca por nome similar usando cache
-        if not fornecedor_encontrado and fornecedor_nome != 'Fornecedor não identificado':
-            fornecedores = self._get_fornecedores_cached()  # ✅ Usa cache
-            for f in fornecedores:
-                if self._similarity_match(fornecedor_nome.lower(), f.nome.lower()) > 0.8:
-                    fornecedor_encontrado = f
-                    break
-        
-        return fornecedor_encontrado
-
     @st.dialog("Revisão de Matching Inteligente", width="large")
     def _display_matching_approval_dialog(self):
         """Dialog para aprovação das sugestões de matching"""
@@ -288,13 +260,6 @@ class CupomView:
         """Dialog para exibir os dados extraídos do cupom para revisão e edição"""
         cupom_data = st.session_state.cupom_data
         selected_fornecedor = st.session_state.get("selected_fornecedor_obj", cupom_data['fornecedor'])
-
-        if 'matching_info' in cupom_data:
-            matching_info = cupom_data['matching_info']
-            if matching_info.get('itens_matchados', 0) > 0:
-                st.success(f"🎯 **Matching Aplicado:** {matching_info['itens_matchados']} itens padronizados com sucesso!")
-            else:
-                st.info("ℹ️ **Matching não aplicado** - utilizando dados originais extraídos pela IA")
 
         st.info("⚠️ **Importante:** Revise todos os dados extraídos pela IA antes de salvar. A precisão pode variar dependendo da qualidade da imagem.")
 
@@ -428,7 +393,7 @@ class CupomView:
         if fornecedor_nome != 'Fornecedor não identificado':
             fornecedores = self._get_fornecedores_cached()  # ✅ Uma única consulta com cache
             for f in fornecedores:
-                if self._similarity_match(fornecedor_nome.lower(), f.nome.lower()) > 0.8:
+                if fornecedor_nome and f.nome and self._similarity_match(fornecedor_nome.lower(), f.nome.lower()) > 0.8:
                     return f
         
         return None

@@ -1,6 +1,6 @@
 [project]
 name = "gestao-simples"
-version = "0.3.0"
+version = "0.3.1"
 description = "Sistema de gestão simplificado para pequenas empresas, que permite a leitura de cupons fiscais via QRCode, coleta automática de dados da SEFAZ-MS através de web scraping e armazenamento seguro em um banco de dados MySQL."
 authors = [
     {name = "WolkerDias",email = "wolker.sd@hotmail.com"}
