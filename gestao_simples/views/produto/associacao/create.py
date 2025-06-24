@@ -44,7 +44,7 @@ def show_create_associacao():
             key=f"produto_selecionado_{st.session_state.form_id}",
             placeholder="Selecione um produto",
             options=produtos,
-            format_func=lambda p: f"{p.id} - {p.nome}",
+            format_func=lambda p: f"{p.id} - {p.nome} - {p.unidade_medida}",
             index=None
         )
 

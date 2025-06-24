@@ -194,11 +194,11 @@ class NotaEntradaCreateView:
             novo_nota_entrada = NotaEntrada(
                 fornecedor_id=fornecedor.id if fornecedor else None,
                 chave_acesso=chave_acesso if chave_acesso else None,
-                modelo=modelo,
+                modelo=modelo if modelo else None,
                 data_emissao=data_emissao,
                 url=url,
                 numero_nota_entrada=numero_nota_entrada,
-                serie_nota_entrada=serie_nota_entrada,
+                serie_nota_entrada=serie_nota_entrada if serie_nota_entrada else None,
                 total_nota_entrada=0.0
             )
             

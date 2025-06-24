@@ -5,6 +5,7 @@ from sqlalchemy.exc import OperationalError, DatabaseError
 from models.usuario import Usuario
 from views.auth.list import UsuarioListView
 from views.qrcode.view import QRCodeView
+from views.cupom.view import CupomView
 from views.produto.list import ProdutoListView
 from views.produto.associacao.list import AssociacoesListView
 from views.nota_entrada.list import NotaEntradaListView
@@ -96,6 +97,7 @@ else:
                 ],
                 "COMPRAS": [        
                     st.Page(NotaEntradaListView, title="Notas Fiscais", icon=":material/receipt_long:"),
+                    st.Page(CupomView, title="Cupons Não Fiscais", icon=":material/receipt:"),
                     st.Page(QRCodeView, title="Leitor de QR Code", icon=":material/qr_code:"),
                 ],
                 "CONFIGURAÇÕES": [

@@ -1,6 +1,6 @@
 [project]
 name = "gestao-simples"
-version = "0.2.2"
+version = "0.3.0"
 description = "Sistema de gestão simplificado para pequenas empresas, que permite a leitura de cupons fiscais via QRCode, coleta automática de dados da SEFAZ-MS através de web scraping e armazenamento seguro em um banco de dados MySQL."
 authors = [
     {name = "WolkerDias",email = "wolker.sd@hotmail.com"}
@@ -25,6 +25,7 @@ dependencies = [
     "pwdlib[argon2] (>=0.2.1,<0.3.0)",
     "pyjwt (>=2.10.1,<3.0.0)",
     "psycopg2-binary (>=2.9.10,<3.0.0)",
+    "google-generativeai (>=0.8.5,<0.9.0)",
 ]
 
 [[tool.poetry.packages]]

@@ -166,19 +166,6 @@ class QRCodeView:
         st.subheader("Itens da NotaEntrada:")
         edited_df = st.data_editor(
             pd.DataFrame(nota_entrada_data['itens']),
-            column_config={
-                "produto": st.column_config.SelectboxColumn(
-                    "produto",
-                    help="Classifique o produto",
-                    width="medium",
-                    options=[
-                        "Verdura",
-                        "Açúcar",
-                        "Arroz",
-                        "Outros",
-                    ],
-                )
-            },
             hide_index=True,
         )
 
