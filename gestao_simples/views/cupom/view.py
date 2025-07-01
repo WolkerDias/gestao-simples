@@ -7,7 +7,9 @@ from services.fornecedor_service import FornecedorService
 from services.nota_entrada_service import NotaEntradaService
 from services.item_nota_entrada_service import ItemNotaEntradaService
 from utils.message_handler import message_handler, MessageType
-from utils.format import format_brl, format_cnpj, format_datetime, format_chave_acesso
+from utils.format import format_brl, format_cnpj
+from datetime import datetime
+from utils.validacoes import validar_fornecedor, validar_nota_entrada, validar_item_nota_entrada, ValidationError
 
 class CupomView:
     def __init__(self):
@@ -257,13 +259,17 @@ class CupomView:
 
     @st.dialog("Novo Cupom Não Fiscal via IA", width="large")
     def _display_cupom_data_dialog(self):
-        """Dialog para exibir os dados extraídos do cupom para revisão e edição"""
+        """Dialog para exibir os dados extraídos do cupom para revisão e edição com validação"""
         cupom_data = st.session_state.cupom_data
         selected_fornecedor = st.session_state.get("selected_fornecedor_obj", cupom_data['fornecedor'])
 
         st.info("⚠️ **Importante:** Revise todos os dados extraídos pela IA antes de salvar. A precisão pode variar dependendo da qualidade da imagem.")
 
-        # 🏪 Fornecedor
+        # Inicializa estado de validação se não existir
+        if 'validation_errors' not in st.session_state:
+            st.session_state.validation_errors = {}
+
+        # Fornecedor
         st.subheader("🏪 Dados do Fornecedor:")
         with st.container(border=True):
             col1, col2 = st.columns(2)
@@ -271,17 +277,107 @@ class CupomView:
             cnpj_display = format_cnpj(selected_fornecedor.cnpj) if selected_fornecedor.cnpj else "Não informado"
             col2.write(f"**CNPJ:** {cnpj_display}")
 
-        # 📄 Nota
+            # Validação do fornecedor em tempo real
+            try:
+                validar_fornecedor(selected_fornecedor)
+                if 'fornecedor' in st.session_state.validation_errors:
+                    del st.session_state.validation_errors['fornecedor']
+            except ValidationError as e:
+                st.session_state.validation_errors['fornecedor'] = e.errors
+                for error in e.errors:
+                    st.error(f"❌ Fornecedor: {error}")
+
+        # Nota
         st.subheader("📄 Dados da Nota:")
         with st.container(border=True):
             if cupom_data['nota_entrada'].chave_acesso:
-                st.write(f"**Chave de Acesso:** {format_chave_acesso(cupom_data['nota_entrada'].chave_acesso)}")
-            col1, col2, col3 = st.columns([1, 1, 2])
-            col1.write(f"**Número:** {cupom_data['nota_entrada'].numero_nota_entrada}")
-            col2.write(f"**Série:** {cupom_data['nota_entrada'].serie_nota_entrada}")
-            col3.write(f"**Data Emissão:** {format_datetime(cupom_data['nota_entrada'].data_emissao)}")
+                cupom_data['nota_entrada'].chave_acesso = st.text_input(
+                    "Chave de Acesso",
+                    value=cupom_data['nota_entrada'].chave_acesso,
+                    help="Chave de acesso da nota fiscal, se disponível",
+                    key="chave_acesso_input"
+                )
+            
+            col1, col2, col3, col4 = st.columns([1, 2, 2, 2])
+            cupom_data['nota_entrada'].modelo = col1.text_input(
+                "Modelo", 
+                value=cupom_data['nota_entrada'].modelo,
+                key="modelo_input"
+            )
+            
+            cupom_data['nota_entrada'].numero_nota_entrada = col2.text_input(
+                "Número da Nota", 
+                value=cupom_data['nota_entrada'].numero_nota_entrada,
+                key="numero_nota_input"
+            )
+            
+            cupom_data['nota_entrada'].serie_nota_entrada = col3.text_input(
+                "Série da Nota", 
+                value=cupom_data['nota_entrada'].serie_nota_entrada,
+                key="serie_nota_input"
+            )
 
-        # 🛒 Itens
+            # Input de data/hora com segundos
+            datetime_str = col4.text_input(
+                "Data de Emissão",
+                value=cupom_data['nota_entrada'].data_emissao.strftime("%d/%m/%Y %H:%M:%S"),
+                help="Data e hora de emissão da nota fiscal. Use o formato DD/MM/AAAA HH:MM:SS",
+                key="data_emissao_input"
+            )
+
+            # Validação e conversão da data
+            try:
+                if datetime_str != cupom_data['nota_entrada'].data_emissao.strftime("%d/%m/%Y %H:%M:%S"):
+                    cupom_data['nota_entrada'].data_emissao = datetime.strptime(datetime_str, "%d/%m/%Y %H:%M:%S")
+            except ValueError:
+                st.error(f"❌ Formato de data inválido. Use DD/MM/AAAA HH:MM:SS. \nEx. {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
+
+            # Validação da nota de entrada
+            nota_errors = []
+            
+            # Validações específicas dos campos da nota
+            if not cupom_data['nota_entrada'].modelo or cupom_data['nota_entrada'].modelo.strip() == "":
+                nota_errors.append("Modelo é obrigatório")
+                
+            if not cupom_data['nota_entrada'].numero_nota_entrada or cupom_data['nota_entrada'].numero_nota_entrada.strip() == "":
+                nota_errors.append("Número da Nota é obrigatório")
+            else:
+                try:
+                    numero = int(cupom_data['nota_entrada'].numero_nota_entrada)
+                    if numero > 999999999:
+                        nota_errors.append("O valor máximo permitido para o Número da Nota é 999.999.999")
+                except (ValueError, TypeError):
+                    nota_errors.append("Número da Nota deve ser um número válido")
+                    
+            if not cupom_data['nota_entrada'].serie_nota_entrada or cupom_data['nota_entrada'].serie_nota_entrada.strip() == "":
+                nota_errors.append("Série da Nota é obrigatória")
+                
+            if not cupom_data['nota_entrada'].data_emissao:
+                nota_errors.append("Data de Emissão é obrigatória")
+            
+            try:
+                # Temporariamente define o fornecedor_id para validação
+                original_fornecedor_id = cupom_data['nota_entrada'].fornecedor_id
+                cupom_data['nota_entrada'].fornecedor_id = selected_fornecedor.id if hasattr(selected_fornecedor, 'id') else 1
+                
+                validar_nota_entrada(cupom_data['nota_entrada'])
+                
+                # Restaura o valor original
+                cupom_data['nota_entrada'].fornecedor_id = original_fornecedor_id
+                
+            except ValidationError as e:
+                nota_errors.extend(e.errors)
+            
+            # Exibe erros da nota
+            if nota_errors:
+                st.session_state.validation_errors['nota_entrada'] = nota_errors
+                for error in nota_errors:
+                    st.error(f"❌ Nota: {error}")
+            else:
+                if 'nota_entrada' in st.session_state.validation_errors:
+                    del st.session_state.validation_errors['nota_entrada']
+
+        # Itens
         st.subheader("🛒 Itens do Cupom:")
         if 'matching_info' in cupom_data and cupom_data['matching_info'].get('itens_matchados', 0) > 0:
             st.success(f"✨ **{cupom_data['matching_info']['itens_matchados']} itens foram padronizados** com base no histórico do fornecedor!")
@@ -296,7 +392,81 @@ class CupomView:
             num_rows="dynamic"
         )
 
-        # ⚖️ Validações
+        # Validação dos itens
+        itens_errors = []
+        if not edited_df.empty:
+            for idx, row in edited_df.iterrows():
+                item_errors = []
+                
+                # Validação da descrição
+                if not row.get('descricao') or str(row.get('descricao')).strip() == "" or pd.isna(row.get('descricao')):
+                    item_errors.append("Descrição é obrigatória")
+                
+                # Validação da quantidade
+                quantidade = row.get('quantidade')
+                if pd.isna(quantidade) or quantidade is None:
+                    item_errors.append("Quantidade é obrigatória")
+                else:
+                    try:
+                        quantidade_float = float(quantidade)
+                        if quantidade_float <= 0:
+                            item_errors.append("Quantidade deve ser maior que zero")
+                    except (ValueError, TypeError):
+                        item_errors.append("Quantidade deve ser um número válido")
+                
+                # Validação do valor
+                valor = row.get('valor')
+                if pd.isna(valor) or valor is None:
+                    item_errors.append("Valor é obrigatório")
+                else:
+                    try:
+                        valor_float = float(valor)
+                        if valor_float <= 0:
+                            item_errors.append("Valor deve ser maior que zero")
+                    except (ValueError, TypeError):
+                        item_errors.append("Valor deve ser um número válido")
+                
+                # Validação da unidade de medida
+                if not row.get('unidade_medida') or str(row.get('unidade_medida')).strip() == "" or pd.isna(row.get('unidade_medida')):
+                    item_errors.append("Unidade de medida é obrigatória")
+                
+                # Validação do código do produto fornecedor
+                if not row.get('codigo_produto_fornecedor') or str(row.get('codigo_produto_fornecedor')).strip() == "" or pd.isna(row.get('codigo_produto_fornecedor')):
+                    item_errors.append("Código do produto fornecedor é obrigatório")
+                
+                # Se houver erros neste item, adiciona à lista geral
+                if item_errors:
+                    for error in item_errors:
+                        itens_errors.append(f"Item {idx + 1}: {error}")
+                
+                # Também usa a validação original como backup
+                try:
+                    item_temp = type('Item', (), {
+                        'descricao': row.get('descricao', ''),
+                        'quantidade': row.get('quantidade', 0),
+                        'valor': row.get('valor', 0),
+                        'unidade_medida': row.get('unidade_medida', ''),
+                        'codigo_produto_fornecedor': row.get('codigo_produto_fornecedor', '')
+                    })()
+                    
+                    validar_item_nota_entrada(item_temp)
+                except ValidationError as e:
+                    for error in e.errors:
+                        error_msg = f"Item {idx + 1}: {error}"
+                        if error_msg not in itens_errors:  # Evita duplicatas
+                            itens_errors.append(error_msg)
+
+        # Exibe erros dos itens
+        if itens_errors:
+            st.session_state.validation_errors['itens'] = itens_errors
+            st.error("❌ **Erros nos itens:**")
+            for error in itens_errors:
+                st.error(f"• {error}")
+        else:
+            if 'itens' in st.session_state.validation_errors:
+                del st.session_state.validation_errors['itens']
+
+        # Validações e cálculos
         if not edited_df.empty:
             total_calc = (edited_df.quantidade * edited_df.valor).sum()
             total_original = cupom_data['nota_entrada'].total_nota_entrada
@@ -311,17 +481,39 @@ class CupomView:
             else:
                 col3.metric("**Status**", "✅ Correto", delta="0%", delta_color='off')
 
-            # 💾 Botões
+            # Verifica se há erros de validação
+            has_validation_errors = bool(st.session_state.validation_errors)
+            
+            # Exibe resumo dos erros se houver
+            if has_validation_errors:
+                st.error("❌ **Corrija os erros acima antes de salvar:**")
+                total_errors = sum(len(errors) if isinstance(errors, list) else 1 
+                                for errors in st.session_state.validation_errors.values())
+                st.error(f"📊 Total de erros: **{total_errors}**")
+
+            # Botões
             col1, col2 = st.columns([1, 1])
             with col1:
-                if st.button("💾 Salvar no Banco de Dados", type="primary", use_container_width=True):
-                    edited_df.dropna(how='all', inplace=True, ignore_index=True)
-                    self._save_cupom_to_database(cupom_data, edited_df, st.session_state.get("selected_fornecedor_id"))
+                save_button = st.button(
+                    "💾 Salvar no Banco de Dados", 
+                    type="primary", 
+                    use_container_width=True,
+                    disabled=has_validation_errors  # Desabilita se houver erros
+                )
+                
+                if save_button:
+                    if not has_validation_errors:
+                        edited_df.dropna(how='all', inplace=True, ignore_index=True)
+                        self._save_cupom_to_database(cupom_data, edited_df, st.session_state.get("selected_fornecedor_id"))
+                    else:
+                        st.error("❌ Corrija todos os erros de validação antes de salvar!")
+                        
             with col2:
                 if st.button("🔄 Capturar Novo Cupom", use_container_width=True):
                     self._reset_to_capture()
         else:
             st.error("❌ Nenhum item foi identificado. Adicione pelo menos um item antes de salvar.")
+            st.session_state.validation_errors['itens'] = ["Nenhum item identificado"]
 
 
     @st.dialog("Processando Cupom", width="medium")
@@ -349,13 +541,13 @@ class CupomView:
                 fornecedor_nome = cupom_data['fornecedor'].nome
                 fornecedor_cnpj = cupom_data['fornecedor'].cnpj
 
-                # ✅ OTIMIZAÇÃO: Uma única busca otimizada
+                # Uma única busca otimizada
                 fornecedor_encontrado = self._find_existing_fornecedor_optimized(fornecedor_nome, fornecedor_cnpj)
 
                 if fornecedor_encontrado:
                     st.write(f"✅ Fornecedor identificado: {fornecedor_encontrado.nome}")
                     st.session_state.selected_fornecedor_id = fornecedor_encontrado.id
-                    # ✅ Armazena o objeto do fornecedor também
+                    # Armazena o objeto do fornecedor também
                     st.session_state.selected_fornecedor_obj = fornecedor_encontrado
                 else:
                     st.write("⚠️ Fornecedor não identificado automaticamente")
@@ -380,7 +572,7 @@ class CupomView:
 
     def _find_existing_fornecedor_optimized(self, fornecedor_nome, fornecedor_cnpj):
         """
-        ✅ VERSÃO OTIMIZADA: Busca fornecedor com cache inteligente
+        Busca fornecedor com cache inteligente
         Evita múltiplas consultas ao banco de dados
         """
         # Primeira tentativa: busca por CNPJ (consulta direta ao banco)
@@ -391,7 +583,7 @@ class CupomView:
         
         # Segunda tentativa: busca por nome similar usando cache
         if fornecedor_nome != 'Fornecedor não identificado':
-            fornecedores = self._get_fornecedores_cached()  # ✅ Uma única consulta com cache
+            fornecedores = self._get_fornecedores_cached()  # Uma única consulta com cache
             for f in fornecedores:
                 if fornecedor_nome and f.nome and self._similarity_match(fornecedor_nome.lower(), f.nome.lower()) > 0.8:
                     return f
@@ -401,7 +593,7 @@ class CupomView:
     @st.dialog("Seleção de Fornecedor", width="large")
     def _display_fornecedor_selection_dialog(self):
         """
-        ✅ OTIMIZAÇÃO: Dialog otimizado para seleção de fornecedor
+        Dialog otimizado para seleção de fornecedor
         Usa cache para evitar múltiplas consultas
         """
         cupom_data = st.session_state.cupom_data
@@ -414,7 +606,7 @@ class CupomView:
             cnpj_display = format_cnpj(cupom_data['fornecedor'].cnpj) if cupom_data['fornecedor'].cnpj else "Não identificado"
             col2.write(f"**CNPJ:** {cnpj_display}")
 
-        # ✅ OTIMIZAÇÃO: Reutiliza fornecedor já encontrado ou busca com cache
+        # Reutiliza fornecedor já encontrado ou busca com cache
         fornecedor_sugerido = None
         if st.session_state.get("selected_fornecedor_obj"):
             # Reutiliza o fornecedor já encontrado no processamento
@@ -425,7 +617,7 @@ class CupomView:
             fornecedor_cnpj = cupom_data['fornecedor'].cnpj
             fornecedor_sugerido = self._find_existing_fornecedor_optimized(fornecedor_nome, fornecedor_cnpj)
 
-        # ✅ OTIMIZAÇÃO: Prepara opções usando cache
+        # Prepara opções usando cache
         fornecedores = self._get_fornecedores_cached()  # Usa cache
         fornecedor_options = {f.id: f"{f.nome} - {format_cnpj(f.cnpj) if f.cnpj else 'Sem CNPJ'}" for f in fornecedores}
 
@@ -451,10 +643,6 @@ class CupomView:
 
         if selected_fornecedor_id:
             fornecedor_selecionado = next((f for f in fornecedores if f.id == selected_fornecedor_id), None)
-            if fornecedor_sugerido and selected_fornecedor_id == fornecedor_sugerido.id:
-                st.info(f"🎯 **Fornecedor sugerido:** {fornecedor_selecionado.nome}")
-            else:
-                st.info(f"👤 **Fornecedor selecionado:** {fornecedor_selecionado.nome}")
 
         # Botões
         col1, col2, col3 = st.columns(3)
@@ -497,74 +685,163 @@ class CupomView:
 
     def _save_cupom_to_database(self, cupom_data, edited_df, selected_fornecedor_id=None):
         """
-        ✅ OTIMIZAÇÃO: Salva os dados com menos consultas ao banco
+        Salva os dados com validação completa antes da persistência
         """
         try:
-            # Verificar se o fornecedor já existe no banco de dados
-            fornecedor = None
+            # VALIDAÇÃO FINAL ANTES DE SALVAR
+            validation_errors = []
             
-            # ✅ OTIMIZAÇÃO: Reutiliza fornecedor já carregado
+            # Valida fornecedor
+            fornecedor = None
             if selected_fornecedor_id and st.session_state.get("selected_fornecedor_obj"):
                 fornecedor = st.session_state.selected_fornecedor_obj
-                message_handler.add_message(
-                    MessageType.INFO,
-                    f"Usando fornecedor pré-selecionado: {fornecedor.nome}"
-                )
             elif selected_fornecedor_id:
-                # Busca apenas se não tiver no cache
                 fornecedor = self.fornecedor_service.buscar_fornecedor_por_id(selected_fornecedor_id)
-                message_handler.add_message(
-                    MessageType.INFO,
-                    f"Usando fornecedor pré-selecionado: {fornecedor.nome}"
-                )
             else:
-                # Caso contrário, procura por CNPJ
                 if cupom_data['fornecedor'].cnpj:
                     fornecedor = self.fornecedor_service.buscar_fornecedor_por_cnpj(cupom_data['fornecedor'].cnpj)
             
             if not fornecedor:
-                # Salva fornecedor
-                fornecedor = self.fornecedor_service.criar_fornecedor(cupom_data['fornecedor'])
-                # ✅ OTIMIZAÇÃO: Invalida cache após criação
-                self._invalidate_fornecedores_cache()
-                message_handler.add_message(
-                    MessageType.SUCCESS,
-                    f"Fornecedor {cupom_data['fornecedor'].nome} cadastrado com sucesso!"
-                )
-                
-            # Atualiza NotaEntrada com o ID do fornecedor
-            cupom_data['nota_entrada'].fornecedor_id = fornecedor.id
-            cupom_data['nota_entrada'].url = "CUPOM_NAO_FISCAL_IA"  # Identificador especial
+                try:
+                    validar_fornecedor(cupom_data['fornecedor'])
+                    fornecedor = self.fornecedor_service.criar_fornecedor(cupom_data['fornecedor'])
+                    self._invalidate_fornecedores_cache()
+                    message_handler.add_message(
+                        MessageType.SUCCESS,
+                        f"Fornecedor {cupom_data['fornecedor'].nome} cadastrado com sucesso!"
+                    )
+                except ValidationError as e:
+                    validation_errors.extend([f"Fornecedor: {error}" for error in e.errors])
+            
+            # Valida nota de entrada
+            cupom_data['nota_entrada'].fornecedor_id = fornecedor.id if fornecedor else None
+            cupom_data['nota_entrada'].url = "CUPOM_NAO_FISCAL_IA"
             if not cupom_data['nota_entrada'].chave_acesso:
                 cupom_data['nota_entrada'].chave_acesso = None
             
-            # Salva nota e itens atomicamente
+            # Validações específicas dos campos da nota
+            if not cupom_data['nota_entrada'].modelo or cupom_data['nota_entrada'].modelo.strip() == "":
+                validation_errors.append("Nota: Modelo é obrigatório")
+                
+            if not cupom_data['nota_entrada'].numero_nota_entrada or cupom_data['nota_entrada'].numero_nota_entrada.strip() == "":
+                validation_errors.append("Nota: Número da Nota é obrigatório")
+            else:
+                try:
+                    numero = int(cupom_data['nota_entrada'].numero_nota_entrada)
+                    if numero > 999999999:
+                        validation_errors.append("Nota: O valor máximo permitido para o Número da Nota é 999.999.999")
+                except (ValueError, TypeError):
+                    validation_errors.append("Nota: Número da Nota deve ser um número válido")
+                    
+            if not cupom_data['nota_entrada'].serie_nota_entrada or cupom_data['nota_entrada'].serie_nota_entrada.strip() == "":
+                validation_errors.append("Nota: Série da Nota é obrigatória")
+                
+            if not cupom_data['nota_entrada'].data_emissao:
+                validation_errors.append("Nota: Data de Emissão é obrigatória")
+                
+            try:
+                validar_nota_entrada(cupom_data['nota_entrada'])
+            except ValidationError as e:
+                validation_errors.extend([f"Nota: {error}" for error in e.errors])
+            
+            # Valida todos os itens
+            itens_validados = []
+            for idx, item_dict in enumerate(edited_df.to_dict('records')):
+                item_errors = []
+                
+                # Validação detalhada de cada campo
+                if not item_dict.get('descricao') or str(item_dict.get('descricao')).strip() == "" or pd.isna(item_dict.get('descricao')):
+                    item_errors.append("Descrição é obrigatória")
+                
+                # Validação da quantidade
+                quantidade = item_dict.get('quantidade')
+                if pd.isna(quantidade) or quantidade is None:
+                    item_errors.append("Quantidade é obrigatória")
+                else:
+                    try:
+                        quantidade_float = float(quantidade)
+                        if quantidade_float <= 0:
+                            item_errors.append("Quantidade deve ser maior que zero")
+                    except (ValueError, TypeError):
+                        item_errors.append("Quantidade deve ser um número válido")
+                
+                # Validação do valor
+                valor = item_dict.get('valor')
+                if pd.isna(valor) or valor is None:
+                    item_errors.append("Valor é obrigatório")
+                else:
+                    try:
+                        valor_float = float(valor)
+                        if valor_float <= 0:
+                            item_errors.append("Valor deve ser maior que zero")
+                    except (ValueError, TypeError):
+                        item_errors.append("Valor deve ser um número válido")
+                
+                # Validação da unidade de medida
+                if not item_dict.get('unidade_medida') or str(item_dict.get('unidade_medida')).strip() == "" or pd.isna(item_dict.get('unidade_medida')):
+                    item_errors.append("Unidade de medida é obrigatória")
+                
+                # Validação do código do produto fornecedor
+                if not item_dict.get('codigo_produto_fornecedor') or str(item_dict.get('codigo_produto_fornecedor')).strip() == "" or pd.isna(item_dict.get('codigo_produto_fornecedor')):
+                    item_errors.append("Código do produto fornecedor é obrigatório")
+                
+                # Se houver erros, adiciona à lista de erros
+                if item_errors:
+                    for error in item_errors:
+                        validation_errors.append(f"Item {idx + 1}: {error}")
+                else:
+                    # Só adiciona à lista de validados se não houver erros
+                    itens_validados.append(item_dict)
+                
+                # Também usa a validação original como backup
+                try:
+                    item_temp = type('Item', (), item_dict)()
+                    validar_item_nota_entrada(item_temp)
+                except ValidationError as e:
+                    for error in e.errors:
+                        error_msg = f"Item {idx + 1}: {error}"
+                        if error_msg not in validation_errors:  # Evita duplicatas
+                            validation_errors.append(error_msg)
+            
+            # Se houver erros de validação, não salva
+            if validation_errors:
+                st.error("❌ **Erros de validação encontrados:**")
+                for error in validation_errors:
+                    st.error(f"• {error}")
+                message_handler.add_message(
+                    MessageType.ERROR,
+                    f"Não foi possível salvar devido a {len(validation_errors)} erro(s) de validação"
+                )
+                return
+            
+            # Se chegou até aqui, todos os dados estão válidos - prossegue com o salvamento
+            # Se não havia itens validados devido a erros, usa todos os itens do DataFrame
+            if not itens_validados and not validation_errors:
+                itens_validados = edited_df.to_dict('records')
+                
             self.nota_entrada_service.criar_nota_entrada_atomica(
                 cupom_data['nota_entrada'],
-                edited_df.to_dict('records')
+                itens_validados
             )
             
-            # Mensagem de sucesso com informações de matching
+            # Mensagem de sucesso
             success_msg = f"Cupom não fiscal processado e salvo com sucesso! Total: {format_brl(cupom_data['nota_entrada'].total_nota_entrada)}"
             if 'matching_info' in cupom_data:
                 matching_info = cupom_data['matching_info']
                 if matching_info.get('itens_matchados', 0) > 0:
                     success_msg += f" | {matching_info['itens_matchados']} itens padronizados"
             
-            message_handler.add_message(
-                MessageType.SUCCESS,
-                success_msg
-            )
+            message_handler.add_message(MessageType.SUCCESS, success_msg)
             
-            # Reset para nova captura
+            # Limpa erros de validação e reseta para nova captura
+            if 'validation_errors' in st.session_state:
+                del st.session_state.validation_errors
             self._reset_to_capture()
             
         except Exception as e:
-            st.error(f"❌ Erro ao salvar cupom: {str(e)}")
-            message_handler.add_message(
-                MessageType.ERROR,
-                f"Erro ao salvar cupom: {str(e)}"
-            )
+            error_msg = f"Erro inesperado ao salvar cupom: {str(e)}"
+            st.error(f"❌ {error_msg}")
+            message_handler.add_message(MessageType.ERROR, error_msg)
 
     def _reset_to_capture(self):
         """Reseta completamente para o estado de captura"""
@@ -572,13 +849,18 @@ class CupomView:
         st.session_state.cupom_state = 'capture'
         st.session_state.cupom_data = None
         st.session_state.selected_fornecedor_id = None
-        st.session_state.selected_fornecedor_obj = None  # ✅ Limpa objeto também
+        st.session_state.selected_fornecedor_obj = None
+        
+        # Limpa erros de validação
+        if 'validation_errors' in st.session_state:
+            del st.session_state.validation_errors
         
         # Clear the file uploader and camera input
         if "file_uploader_key" not in st.session_state:
             st.session_state["file_uploader_key"] = 0
         if "cupom_camera_key" not in st.session_state:
             st.session_state["cupom_camera_key"] = 0
+        
         # Limpa a imagem armazenada
         if 'cupom_image' in st.session_state:
             del st.session_state.cupom_image
@@ -589,7 +871,7 @@ class CupomView:
         # Limpa o estado das sugestões aprovadas
         self._clear_matching_state()
         
-        # ✅ OTIMIZAÇÃO: Invalida cache para próxima sessão
+        # Invalida cache para próxima sessão
         self._invalidate_fornecedores_cache()
         
         st.rerun()
