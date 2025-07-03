@@ -114,7 +114,8 @@ class QRCodeService:
             serie_nota_entrada = soup.select_one("strong:-soup-contains('Série:')").next_sibling.text.strip()
             data_emissao_str = soup.select_one("strong:-soup-contains('Emissão:')").next_sibling.text.split('-')[0].strip()
             data_emissao = datetime.strptime(data_emissao_str, '%d/%m/%Y %H:%M:%S')
-            total_nota_entrada = float(soup.find('span', class_='txtMax').text.replace(',', '.'))
+            total_nota_entrada = float(soup.find('span', class_='txtMax').text.replace('.', '').replace(',', '.'))
+
 
             # Cria objetos do modelo
             fornecedor = Fornecedor(
