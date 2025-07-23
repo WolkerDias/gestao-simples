@@ -22,15 +22,28 @@ class AuditoriaRepository:
                 pfa.produto_id,
                 ne.data_emissao,
                 (ine.quantidade * pfa.quantidade_por_grade) AS quantidade_unidades,
-                ine.valor AS valor_unitario,
-                (ine.quantidade * pfa.quantidade_por_grade) * ine.valor AS valor_total_lote
+                -- Calcular valor unitário dividindo pelo total de unidades
+                CASE 
+                    WHEN pfa.quantidade_por_grade > 0 THEN
+                        ine.valor / pfa.quantidade_por_grade
+                    ELSE 
+                        ine.valor
+                END AS valor_unitario,
+                (ine.quantidade * pfa.quantidade_por_grade) * 
+                (CASE 
+                    WHEN pfa.quantidade_por_grade > 0 THEN
+                        ine.valor / pfa.quantidade_por_grade
+                    ELSE 
+                        ine.valor
+                END) AS valor_total_lote
             FROM
                 itens_nota_entrada ine
             JOIN notas_entrada ne ON
                 ine.nota_entrada_id = ne.id
-            JOIN produto_fornecedor_associacao pfa ON
-                ine.codigo_produto_fornecedor = pfa.codigo_produto_fornecedor
-                AND ne.fornecedor_id = pfa.fornecedor_id,
+            LEFT JOIN produto_fornecedor_associacao pfa ON
+                pfa.fornecedor_id = ne.fornecedor_id 
+                AND pfa.codigo_produto_fornecedor = ine.codigo_produto_fornecedor
+                AND pfa.descricao_produto_fornecedor = ine.descricao,
                 dados_inventario di
             WHERE
                 ne.data_emissao <= di.data_fim_contagem

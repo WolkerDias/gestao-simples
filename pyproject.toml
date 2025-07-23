@@ -1,6 +1,6 @@
 [project]
 name = "gestao-simples"
-version = "0.3.2"
+version = "0.4.0"
 description = "Sistema de gestão inteligente para pequenas empresas com leitura de cupons fiscais e não fiscais, extração de dados automática utilizando IA em imagens ou via web scraping na SEFAZ-MS, identificação de fornecedores, associação inteligente de produtos e armazenamento seguro em banco de dados MySQL ou PostgreSQL."
 authors = [
     {name = "WolkerDias",email = "wolker.sd@hotmail.com"}
@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11,<3.14"
 dependencies = [
     "pandas (>=2.2.3,<3.0.0)",
-    "streamlit (>=1.41.1,<2.0.0)",
+    "streamlit (>=1.41.1,<1.46.0)",
     "streamlit-date-picker (>=0.0.5,<0.0.6)",
     "schedule (>=1.2.2,<2.0.0)",
     "beautifulsoup4 (>=4.13.0,<5.0.0)",

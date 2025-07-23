@@ -818,7 +818,11 @@ class CupomView:
             # Se não havia itens validados devido a erros, usa todos os itens do DataFrame
             if not itens_validados and not validation_errors:
                 itens_validados = edited_df.to_dict('records')
-                
+            
+            # Atualiza a nota de entrada com o total calculado
+            total_nota_entrada = float((edited_df['quantidade'] * edited_df['valor']).sum())
+            cupom_data['nota_entrada'].total_nota_entrada = total_nota_entrada
+
             self.nota_entrada_service.criar_nota_entrada_atomica(
                 cupom_data['nota_entrada'],
                 itens_validados

@@ -43,13 +43,25 @@ class NotaEntradaCreateView:
                 if key in st.session_state:
                     del st.session_state[key]            
             st.rerun()
+            
         
         with st.expander("**Dados da Nota**", expanded=True):
-            col1, col2, col3 = st.columns([1, 2, 2])
+            col1, col2, col3, col4 = st.columns([1, 2, 2, 2])
             modelo = col1.text_input("Modelo")
             numero_nota_entrada = col2.text_input("Número da Nota")
             serie_nota_entrada = col3.text_input("Série da Nota")
+            # Input de data/hora com segundos
+            # Define o valor padrão apenas uma vez
+            if "data_emissao_default" not in st.session_state:
+                hora_default = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+                st.session_state["data_emissao_default"] = hora_default.strftime("%d/%m/%Y %H:%M:%S")
 
+            datetime_str = col4.text_input(
+                "Data de Emissão",
+                value=st.session_state["data_emissao_default"],
+                help="Data e hora de emissão da nota fiscal. Use o formato DD/MM/AAAA HH:MM:SS",
+                key="data_emissao_input"
+            )
             fornecedores = self.fornecedor_service.listar_fornecedores()
             fornecedor = st.selectbox(
                 "Fornecedor",
@@ -62,8 +74,13 @@ class NotaEntradaCreateView:
 
             chave_acesso = st.text_input("Chave de acesso")
             url = st.text_input("URL")
-            st.markdown("Data da emissão")
-            data_emissao = date_picker(picker_type=PickerType.time, value=datetime.now(), key='date_picker')
+
+            # Validação e conversão da data
+            try:
+                if datetime_str:
+                    data_emissao = datetime.strptime(datetime_str, "%d/%m/%Y %H:%M:%S")
+            except ValueError:
+                st.error(f"❌ Formato de data inválido. Use DD/MM/AAAA HH:MM:SS. \nEx. {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
 
         with st.expander("**Itens da Nota**", expanded=True):
             # Seção para adicionar itens históricos dentro do expander dos itens
