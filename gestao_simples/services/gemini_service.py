@@ -77,7 +77,7 @@ class GeminiService:
                 },
                 "nota_entrada": {
                     "chave_acesso": "chave de acesso se disponível ou None",
-                    "numero_nota_entrada": "número da nota/cupom",
+                    "numero_nota_entrada": "número da nota/cupom" ou None,
                     "serie_nota_entrada": "série se disponível ou '1'",
                     "data_emissao": "data no formato DD/MM/YYYY HH:MM:SS",
                     "total_nota_entrada": valor_total_numerico,
@@ -109,7 +109,7 @@ class GeminiService:
                 🔸 **Exemplo correto:** 15.99 (e não 15,99 ou 1.599,00)
                 🔸 **Os valores devem refletir o preço real do produto, não valores inflacionados**
             - Para datas, use o formato DD/MM/YYYY HH:MM:SS
-            - Se não encontrar algum campo, use null ou valores padrão apropriados
+            - Se não encontrar algum campo, use null sem aspas ou valores padrão apropriados
             - Para quantidade, assuma 3 casas decimais, se não especificada, assuma 1
             - Para unidade_medida, se não especificada, use "UN"
             - Seja preciso com os valores e descrições dos produtos
@@ -474,13 +474,16 @@ class GeminiService:
                 # Fallback se formato de data estiver incorreto
                 data_emissao = datetime.now()
 
+            numero = nota_data.get('numero_nota_entrada')
+            serie = nota_data.get('serie_nota_entrada')
+
             nota_entrada = NotaEntrada(
                 modelo=nota_data.get('modelo', 65),  # 65 para cupons não fiscais
                 chave_acesso=nota_data.get('chave_acesso') or '',
                 fornecedor_id=None,  # Será definido após salvar o fornecedor
                 data_emissao=data_emissao,
-                numero_nota_entrada=str(nota_data.get('numero_nota_entrada', '1')),
-                serie_nota_entrada=str(nota_data.get('serie_nota_entrada', '1')),
+                numero_nota_entrada=str(numero) if numero is not None else None,
+                serie_nota_entrada=str(serie) if serie is not None else '1',
                 total_nota_entrada=float(nota_data.get('total_nota_entrada', 0))
             )
 

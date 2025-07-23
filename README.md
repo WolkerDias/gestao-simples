@@ -165,6 +165,8 @@ O Gestão Simples é um sistema de gestão inteligente que transforma notas fisc
    - Aplica sugestões inteligentes de matching com produtos previamente cadastrados
    - Interface amigável para revisão e edição final dos dados extraídos antes do salvamento
 
+    ![Extração Inteligente de Cupons Não Fiscais Usando IA](/image/leitor_cupom.gif)
+
 ---
 
 ### 🏗️ Funcionalidades em Desenvolvimento

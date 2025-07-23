@@ -37,7 +37,7 @@ class AssociacoesListView:
         
         with columns[1]:
             if st.button("🔗 Associar Produtos", use_container_width=True, disabled=disabled):
-                show_create_associacao()        
+                show_create_associacao(itens_nao_associados)        
 
         with st.spinner("📦 Carregando associações existentes..."):
             associacoes = self.service.listar_associacoes()
