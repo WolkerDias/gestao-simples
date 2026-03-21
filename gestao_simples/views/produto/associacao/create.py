@@ -12,16 +12,17 @@ service = ProdutoFornecedorAssociacaoService()
 produto_service = ProdutoService()
 suggestion_optimizer = SuggestionOptimizer()
 
-# Cache para otimizar performance
-if 'associacoes_cache' not in st.session_state:
-    st.session_state.associacoes_cache = {}
-if 'produtos_cache' not in st.session_state:
-    st.session_state.produtos_cache = {}
-if 'sugestoes_lote_cache' not in st.session_state:
-    st.session_state.sugestoes_lote_cache = {}
 
 @st.dialog("📥 Fila de Associação de Produtos", width="large")
 def show_create_associacao(itens_nao_associados=None):
+    # Cache para otimizar performance
+    if 'associacoes_cache' not in st.session_state:
+        st.session_state.associacoes_cache = {}
+    if 'produtos_cache' not in st.session_state:
+        st.session_state.produtos_cache = {}
+    if 'sugestoes_lote_cache' not in st.session_state:
+        st.session_state.sugestoes_lote_cache = {}
+
     # Recarrega a lista ao iniciar/recarregar a página
     if itens_nao_associados:
         st.session_state.itens_fila = itens_nao_associados
