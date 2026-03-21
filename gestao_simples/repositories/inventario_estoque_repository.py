@@ -66,6 +66,7 @@ class InventarioEstoqueRepository(BaseRepository):
             return (
                 session.query(InventarioEstoque)
                 .options(joinedload(InventarioEstoque.itens))  # Carrega os itens junto
+                .order_by(InventarioEstoque.id.desc())  # Ordena do mais recente para o mais antigo
                 .all()
             )
         

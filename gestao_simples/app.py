@@ -4,6 +4,11 @@ import jwt
 from sqlalchemy.exc import OperationalError, DatabaseError
 from models.usuario import Usuario
 from views.auth.list import UsuarioListView
+from views.receita.list import ReceitaListView
+from views.categoria_receita.list import CategoriaReceitaListView
+from views.despesa.list import DespesaListView
+from views.categoria_despesa.list import CategoriaDespesaListView
+from views.conta.list import ContaListView
 from views.qrcode.view import QRCodeView
 from views.cupom.view import CupomView
 from views.produto.list import ProdutoListView
@@ -88,6 +93,13 @@ else:
 
             # Páginas
             pages = {
+                "FINANCEIRO": [
+                    st.Page(ReceitaListView, title="Receitas", icon=":material/attach_money:"),
+                    st.Page(CategoriaReceitaListView, title="Categorias de Receita", icon=":material/category:"),
+                    st.Page(DespesaListView, title="Despesas", icon=":material/money_off:"),
+                    st.Page(CategoriaDespesaListView, title="Categorias de Despesa", icon=":material/category:"),
+                    st.Page(ContaListView, title="Contas", icon=":material/account_balance:"),
+                ],
                 "GESTÃO DE ESTOQUE": [
                     st.Page(ProdutoListView, title="Produtos", icon=":material/shopping_cart:"),
                     st.Page(AssociacoesListView, title="Produtos Associados", icon=":material/queue:"),

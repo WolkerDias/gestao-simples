@@ -1,5 +1,7 @@
 # utils/validacoes.py
 from utils.logger import logger
+from datetime import date
+from decimal import Decimal
 
 class ValidationError(ValueError):
     """Erro customizado para validações que permite múltiplos erros"""
@@ -125,3 +127,119 @@ def validar_formato_referencia(referencia: str):
             mes_num = int(mes)
             if mes_num < 1 or mes_num > 12:
                 raise ValidationError("Mês em referência deve em estar entre 01 e 12.")
+        
+
+def validar_receita(dados: dict, atualizacao: bool = False):
+    """Valida os dados de uma receita"""
+    erros = []
+    
+    # Validação da descrição
+    if 'descricao' in dados:
+        if not dados['descricao'] or not dados['descricao'].strip():
+            erros.append("Descrição é obrigatória")
+        elif len(dados['descricao'].strip()) > 200:
+            erros.append("Descrição deve ter no máximo 200 caracteres")
+    elif not atualizacao:
+        erros.append("Descrição é obrigatória")
+    
+    # Validação do valor
+    if 'valor' in dados:
+        try:
+            valor = Decimal(str(dados['valor']))
+            if valor <= 0:
+                erros.append("Valor deve ser maior que zero")
+        except (ValueError, TypeError):
+            erros.append("Valor deve ser um número válido")
+    elif not atualizacao:
+        erros.append("Valor é obrigatório")
+    
+    # Validação da data de recebimento
+    if 'data_recebimento' in dados:
+        if not isinstance(dados['data_recebimento'], date):
+            try:
+                # Tenta converter string para date se necessário
+                if isinstance(dados['data_recebimento'], str):
+                    dados['data_recebimento'] = date.fromisoformat(dados['data_recebimento'])
+            except ValueError:
+                erros.append("Data de recebimento deve estar no formato válido")
+    elif not atualizacao:
+        erros.append("Data de recebimento é obrigatória")
+    
+    # Validação da categoria
+    if 'categoria_id' in dados:
+        if not isinstance(dados['categoria_id'], int) or dados['categoria_id'] <= 0:
+            erros.append("Categoria deve ser selecionada")
+    elif not atualizacao:
+        erros.append("Categoria é obrigatória")
+    
+    # Validação das observações (opcional)
+    if 'observacoes' in dados and dados['observacoes']:
+        if len(dados['observacoes']) > 1000:
+            erros.append("Observações devem ter no máximo 1000 caracteres")
+    
+    if erros:
+        raise ValueError(f"Dados inválidos: {'; '.join(erros)}")
+
+def validar_despesa(dados: dict, atualizacao: bool = False):
+    """Valida os dados de uma despesa"""
+    erros = []
+    
+    # Validação da descrição
+    if 'descricao' in dados:
+        if not dados['descricao'] or not dados['descricao'].strip():
+            erros.append("Descrição é obrigatória")
+        elif len(dados['descricao'].strip()) > 200:
+            erros.append("Descrição deve ter no máximo 200 caracteres")
+    elif not atualizacao:
+        erros.append("Descrição é obrigatória")
+    
+    # Validação do valor
+    if 'valor' in dados:
+        try:
+            valor = Decimal(str(dados['valor']))
+            if valor <= 0:
+                erros.append("Valor deve ser maior que zero")
+        except (ValueError, TypeError):
+            erros.append("Valor deve ser um número válido")
+    elif not atualizacao:
+        erros.append("Valor é obrigatório")
+    
+    # Validação da data de vencimento
+    if 'data_vencimento' in dados:
+        if not isinstance(dados['data_vencimento'], date):
+            try:
+                # Tenta converter string para date se necessário
+                if isinstance(dados['data_vencimento'], str):
+                    dados['data_vencimento'] = date.fromisoformat(dados['data_vencimento'])
+            except ValueError:
+                erros.append("Data de vencimento deve estar no formato válido")
+    elif not atualizacao:
+        erros.append("Data de vencimento é obrigatória")
+    
+    # Validação da data de pagamento (opcional)
+    if 'data_pagamento' in dados and dados['data_pagamento']:
+        if not isinstance(dados['data_pagamento'], date):
+            try:
+                if isinstance(dados['data_pagamento'], str):
+                    dados['data_pagamento'] = date.fromisoformat(dados['data_pagamento'])
+            except ValueError:
+                erros.append("Data de pagamento deve estar no formato válido")
+    
+    # Validação da categoria
+    if 'categoria_id' in dados:
+        if not isinstance(dados['categoria_id'], int) or dados['categoria_id'] <= 0:
+            erros.append("Categoria deve ser selecionada")
+    elif not atualizacao:
+        erros.append("Categoria é obrigatória")
+    
+    # Validação das observações (opcional)
+    if 'observacoes' in dados and dados['observacoes']:
+        if len(dados['observacoes']) > 1000:
+            erros.append("Observações devem ter no máximo 1000 caracteres")
+    
+    # Validação do status pago
+    if 'paga' in dados and dados['paga'] and not dados.get('data_pagamento'):
+        erros.append("Data de pagamento é obrigatória quando despesa está marcada como paga")
+    
+    if erros:
+        raise ValueError(f"Dados inválidos: {'; '.join(erros)}")
