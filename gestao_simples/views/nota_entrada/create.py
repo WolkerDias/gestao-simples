@@ -11,6 +11,7 @@ from streamlit_date_picker import date_picker, PickerType
 import streamlit as st
 from utils.format import format_brl
 import copy
+import uuid
 
 class NotaEntradaCreateView:
     def __init__(self):
@@ -37,7 +38,8 @@ class NotaEntradaCreateView:
             keys_to_reset = [
                 "create_mode", "is_editing", "temp_items", "editing_items",
                 "itens_para_quantidade", "repeticoes", "modal_repeticoes",
-                "fornecedor_selecionado", "multiselect_itens_create"
+                "fornecedor_selecionado", "multiselect_itens_create",
+                "row_counts", "custom_items"
             ]
             for key in keys_to_reset:
                 if key in st.session_state:
@@ -47,9 +49,9 @@ class NotaEntradaCreateView:
         
         with st.expander("**Dados da Nota**", expanded=True):
             col1, col2, col3, col4 = st.columns([1, 2, 2, 2])
-            modelo = col1.text_input("Modelo")
+            modelo = col1.text_input("Modelo", value=65)
             numero_nota_entrada = col2.text_input("Número da Nota")
-            serie_nota_entrada = col3.text_input("Série da Nota")
+            serie_nota_entrada = col3.text_input("Série da Nota", value=1)
             # Input de data/hora com segundos
             # Define o valor padrão apenas uma vez
             if "data_emissao_default" not in st.session_state:
@@ -250,53 +252,183 @@ class NotaEntradaCreateView:
             else:
                 st.error(f"Erro ao validar Nota. {str(e)}")
         except Exception as e:
-            st.error(f"Erro ao cadastrar Nota: {str(e)}")               
+            st.error(f"Erro ao cadastrar Nota: {str(e)}")
 
-    @st.dialog("Quantas vezes o item deve repetir?")
+    def _add_row(self, idx):
+        st.session_state.row_ids[idx].append(str(uuid.uuid4()))
+
+    def _remove_row(self, idx, r_id, key_qtd, key_val):
+        if len(st.session_state.row_ids[idx]) > 1:
+            st.session_state.row_ids[idx].remove(r_id)
+            # Limpa o lixo da memória
+            if key_qtd in st.session_state: del st.session_state[key_qtd]
+            if key_val in st.session_state: del st.session_state[key_val]
+
+    def _add_custom(self):
+        st.session_state.custom_items.append({'id': str(uuid.uuid4()), 'unidade': 'UN'})
+
+    def _remove_custom(self, c_id, keys_to_delete):
+        # Filtra a lista removendo apenas o item com o ID especificado
+        st.session_state.custom_items = [c for c in st.session_state.custom_items if c.get('id') != c_id]
+        for k in keys_to_delete:
+            if k in st.session_state: del st.session_state[k]               
+
+    @st.dialog("Detalhes dos Itens", width="large")
     def _render_modal_repeticoes_create(self):
-        with st.container():
-            if "itens_para_quantidade" not in st.session_state:
-                st.session_state.itens_para_quantidade = []
-            if "repeticoes" not in st.session_state:
-                st.session_state.repeticoes = {}
-            with st.form("repeticoes_form_create"):
-                for idx, item in enumerate(st.session_state.itens_para_quantidade):
-                    st.write(f"**{item['codigo']} - {item['descricao']}** ({item['unidade']})")
-                    st.session_state.repeticoes[idx] = st.number_input(
-                        "Quantidade de repetições:",
-                        min_value=1,
-                        value=st.session_state.repeticoes.get(idx, 1),
-                        key=f"qtd_create_{idx}"
-                    )
-                    st.divider()
-                col1, col2 = st.columns([1, 3])
-                if col1.form_submit_button("Confirmar", type="primary"):
-                    self._processar_repeticoes_create()
-                if col2.form_submit_button("Cancelar"):
-                    st.session_state.modal_repeticoes = False
-                    st.rerun()
+        if "itens_para_quantidade" not in st.session_state:
+            st.session_state.itens_para_quantidade = []
+            
+        if "row_ids" not in st.session_state:
+            st.session_state.row_ids = {
+                idx: [str(uuid.uuid4())] for idx in range(len(st.session_state.itens_para_quantidade))
+            }
+            
+        if "custom_items" not in st.session_state:
+            st.session_state.custom_items = []
+
+        subtotal_geral = 0.0
+
+        st.markdown("### Itens do Fornecedor")
+        for idx, item in enumerate(st.session_state.itens_para_quantidade):
+            st.markdown(f"**{item['codigo']} - {item['descricao']}** ({item['unidade']})")
+            
+            row_ids = st.session_state.row_ids.get(idx, [])
+
+            for r_id in row_ids:
+                c1, c2, c3, c4 = st.columns([2, 2, 2, 1], vertical_alignment="bottom")
+                
+                key_qtd = f"qtd_{idx}_{r_id}"
+                key_val = f"val_{idx}_{r_id}"
+
+                qtd = c1.number_input("Qtd:", min_value=0.01, value=st.session_state.get(key_qtd, 1.0), format="%.2f", key=key_qtd)
+                val = c2.number_input("Valor Unit.:", min_value=0.0, value=st.session_state.get(key_val, float(item.get('valor', 0.0))), format="%.2f", key=key_val)
+                
+                subtotal_linha = qtd * val
+                subtotal_geral += subtotal_linha
+                
+                c3.metric("Subtotal", format_brl(subtotal_linha))
+
+                with c4:
+                    bc1, bc2 = st.columns(2)
+                    # Usando on_click para alterar a lista ANTES da tela atualizar
+                    bc1.button("➕", key=f"add_{idx}_{r_id}", help="Adicionar variação", 
+                               on_click=self._add_row, args=(idx,))
+                               
+                    bc2.button("🗑️", key=f"rem_{idx}_{r_id}", help="Remover variação", 
+                               on_click=self._remove_row, args=(idx, r_id, key_qtd, key_val), 
+                               disabled=(len(st.session_state.row_ids[idx]) <= 1))
+            st.divider()
+
+        st.markdown("### Itens Adicionais (Manuais)")
+        for custom in st.session_state.custom_items:
+            c_id = custom['id']
+            c1, c2, c3, c4, c5 = st.columns([2, 3, 1.5, 1.5, 1], vertical_alignment="bottom")
+            
+            key_cod = f"cust_cod_{c_id}"
+            key_desc = f"cust_desc_{c_id}"
+            key_cqtd = f"cust_qtd_{c_id}"
+            key_cval = f"cust_val_{c_id}"
+            keys_to_delete = [key_cod, key_desc, key_cqtd, key_cval]
+            
+            cod = c1.text_input("Código", value=st.session_state.get(key_cod, ""), key=key_cod)
+            desc = c2.text_input("Descrição", value=st.session_state.get(key_desc, ""), key=key_desc)
+            qtd = c3.number_input("Qtd", min_value=0.01, value=st.session_state.get(key_cqtd, 1.0), format="%.2f", key=key_cqtd)
+            val = c4.number_input("Valor Unit.", min_value=0.0, value=st.session_state.get(key_cval, 0.0), format="%.2f", key=key_cval)
+            
+            subtotal_linha = qtd * val
+            subtotal_geral += subtotal_linha
+
+            c5.button("🗑️", key=f"rem_cust_{c_id}", help="Remover item manual", 
+                      on_click=self._remove_custom, args=(c_id, keys_to_delete))
+
+        st.button("➕ Adicionar Item Novo", on_click=self._add_custom)
+        st.divider()
+
+        st.markdown("### Resumo Financeiro")
+        c1, c2, c3 = st.columns(3)
+        c1.metric("**Subtotal Geral**", format_brl(subtotal_geral))
+        
+        desc_acres = c2.number_input("Desconto (-) / Acréscimo (+)", value=st.session_state.get('desc_acres_input', 0.0), key="desc_acres_input", format="%.2f")
+        
+        total_final = subtotal_geral + desc_acres
+        c3.metric("**Total Final**", format_brl(total_final))
+
+        st.write("")
+        c_btn1, c_btn2 = st.columns([1, 4])
+        if c_btn1.button("Confirmar Lançamentos", type="primary"):
+            self._processar_repeticoes_create()
+        if c_btn2.button("Cancelar"):
+            self._limpar_modal_repeticoes()
+            st.rerun()
 
     def _processar_repeticoes_create(self):
         novos_itens = []
+        subtotal_geral = 0.0
+        itens_temp_processados = []
+
+        # 1. Coleta itens do fornecedor processando via ID único
         for idx, item in enumerate(st.session_state.itens_para_quantidade):
-            qtd = st.session_state.repeticoes.get(idx, 1)
-            for _ in range(qtd):
-                novo_item = ItemNotaEntrada(
-                    codigo_produto_fornecedor=item['codigo'],
-                    descricao=item['descricao'],
-                    quantidade=1.0,  # Valor inicial
-                    unidade_medida=item['unidade'],
-                    valor=item['valor'],
-                )
-                novos_itens.append(novo_item)
+            row_ids = st.session_state.row_ids.get(idx, [])
+            for r_id in row_ids:
+                qtd = st.session_state.get(f"qtd_{idx}_{r_id}", 1.0)
+                val = st.session_state.get(f"val_{idx}_{r_id}", float(item.get('valor', 0.0)))
+                subtotal_geral += qtd * val
+                
+                itens_temp_processados.append({
+                    'codigo': item['codigo'],
+                    'descricao': item['descricao'],
+                    'quantidade': qtd,
+                    'unidade': item['unidade'],
+                    'valor_original': val
+                })
+
+        # 2. Coleta itens manuais puxando direto do estado (muito mais seguro)
+        for custom in st.session_state.custom_items:
+            c_id = custom['id']
+            cod = st.session_state.get(f"cust_cod_{c_id}", "SEM_COD")
+            desc = st.session_state.get(f"cust_desc_{c_id}", "Item Manual")
+            qtd = st.session_state.get(f"cust_qtd_{c_id}", 1.0)
+            val = st.session_state.get(f"cust_val_{c_id}", 0.0)
+            
+            subtotal_geral += qtd * val
+            
+            itens_temp_processados.append({
+                'codigo': cod,
+                'descricao': desc,
+                'quantidade': qtd,
+                'unidade': custom.get('unidade', 'UN'),
+                'valor_original': val
+            })
+
+        # 3. Aplicar o Rateio
+        desc_acres = st.session_state.get('desc_acres_input', 0.0)
+        total_final = subtotal_geral + desc_acres
+        fator = (total_final / subtotal_geral) if subtotal_geral > 0 else 1.0
+
+        # 4. Criar Objetos
+        for it in itens_temp_processados:
+            valor_rateado = it['valor_original'] * fator
+            novo_item = ItemNotaEntrada(
+                codigo_produto_fornecedor=it['codigo'],
+                descricao=it['descricao'],
+                quantidade=it['quantidade'],
+                unidade_medida=it['unidade'],
+                valor=valor_rateado
+            )
+            novos_itens.append(novo_item)
 
         st.session_state.temp_items.extend(novos_itens)
-
-        # Limpa estados temporários
-        if "itens_para_quantidade" in st.session_state:
-            del st.session_state.itens_para_quantidade
-        if "modal_repeticoes" in st.session_state:
-            del st.session_state.modal_repeticoes
-        st.session_state.multiselect_itens_create = []
-        st.session_state.repeticoes = {}
+        self._limpar_modal_repeticoes()
         st.rerun()
+
+    def _limpar_modal_repeticoes(self):
+        """Limpa as variáveis temporárias usadas no modal para evitar lixo de memória"""
+        keys_to_clean = [
+            "itens_para_quantidade", "modal_repeticoes", 
+            "row_ids", "custom_items", "desc_acres_input" 
+        ]
+        for k in keys_to_clean:
+            if k in st.session_state:
+                del st.session_state[k]
+        
+        st.session_state.multiselect_itens_create = []
